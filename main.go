@@ -1,197 +1,86 @@
 package main
 
-import (
-	"encoding/json"
-	"errors"
-	"io"
-	"log"
-	"net/http"
-	"os"
-)
-
-type IPInfo struct {
-	IP string `json:"ip"`
-}
-
-type Record struct {
-	IP string
-	ID string
-}
-
-var (
-	Test_URL        string = "https://connect.rom.miui.com/generate_204"
-	IPv4_API_URL    string = "https://api.ipify.org?format=json"
-	IPv6_API_URL    string = "https://api6.ipify.org?format=json"
-	accessKeyId     string
-	accessKeySecret string
-	v6_disable_flag string = "0"
-	IPv4            string
-	IPv6            string
-	domain          string
-	domain_v6       string
-	subDomain       string
-	subDomain_v6    string
-	v4_record       Record
-	v6_record       Record
-)
+import "os"
 
 func main() {
-	log.Println("正在从环境变量获取相关设置")
-	err := getEnv()
+	getEnv()
+	println("===> 检查网络连接")
+	ms, err := verifyNetConn(connTestAPI)
 	if err != nil {
-		log.Println(err)
+		println("网络连接失败", err.Error())
 		os.Exit(1)
 	}
-	log.Println("获取完成")
-	log.Println("将查询与修改的 IPv4 域名为:", subDomain+"."+domain)
-	if v6_disable_flag == "0" {
-		log.Println("将查询与修改的 IPv6 域名为:", subDomain_v6+"."+domain_v6)
-	}
-	log.Println("将使用", IPv4_API_URL, "获取 IPv4")
-	if v6_disable_flag == "0" {
-		log.Println("将使用", IPv6_API_URL, "获取 IPv6")
-	}
-	log.Println("正在检查网络连接")
-	log.Println("正在请求", Test_URL)
-	err = verifyNetConn()
-	if err != nil {
-		log.Println("网络检查失败:", err.Error())
-		os.Exit(1)
-	}
-	log.Println("网络连接正常")
-	log.Println("正在获取IP")
-	err = getIP(IPv4_API_URL, &IPv4)
-	if err != nil {
-		log.Println(err)
-		os.Exit(1)
-	}
-	log.Println("IPv4:", IPv4)
-	if v6_disable_flag == "0" {
-		err = getIP(IPv6_API_URL, &IPv6)
+	println("网络连接成功，延迟(ms):", ms)
+	if flag.v4 == "true" {
+		println("===> IPv4: 查询当前 IP")
+		getIP(myip.v4, &v4.currentIP, Ipv4Reg)
 		if err != nil {
-			log.Println(err)
+			println("查询当前 IP 失败:", err.Error())
 			os.Exit(1)
 		}
-		log.Println("IPv6:", IPv6)
-	}
-	log.Println("正在查询记录")
-	err = queryRecord(subDomain+"."+domain, "A", &v4_record)
-	if err != nil {
-		log.Println("查询失败:", err.Error())
-		os.Exit(1)
-	}
-	if v6_disable_flag == "0" {
-		err = queryRecord(subDomain_v6+"."+domain_v6, "AAAA", &v6_record)
+		println("当前 IP:", v4.currentIP)
+		println("===> IPv4: 查询当前域名记录")
+		err = queryRecord(v4.subDomain+"."+v4.domain, "A", &v4.record)
 		if err != nil {
-			log.Println("查询失败: ", err.Error())
+			println("查询记录失败:", err.Error())
 			os.Exit(1)
 		}
-	}
-	if v4_record.ID == "" {
-		log.Println("未查询到相应 A 记录，添加记录:", IPv4)
-		err = addRecord(domain, subDomain, "A", IPv4)
-		if err != nil {
-			log.Println("添加失败: ", err.Error())
-			os.Exit(1)
-		}
-		log.Println("A 记录添加成功")
-	} else if v4_record.IP != IPv4 {
-		log.Println("A 记录与当前 IP 不匹配，更新记录:", IPv4)
-		err = updateRecord(v4_record.ID, subDomain, "A", IPv4)
-		if err != nil {
-			log.Println("更新失败: ", err.Error())
-			os.Exit(1)
-		}
-		log.Println("A 记录更新成功")
-	} else {
-		log.Println("当前 A 记录:", v4_record.IP, "无需更新")
-	}
-	if v6_disable_flag == "0" {
-		if v6_record.ID == "" {
-			log.Println("未查询到相应 AAAA 记录，添加记录:", IPv6)
-			err = addRecord(domain_v6, subDomain_v6, "AAAA", IPv6)
+		if v4.record.ID == "" {
+			println("未查询到相应 A 记录, 即将添加")
+			println("===> IPv4: 添加新 A 记录")
+			err = addRecord(v4.domain, v4.subDomain, "A", v4.currentIP)
 			if err != nil {
-				log.Println("添加失败: ", err.Error())
+				println("添加记录失败:", err.Error())
 				os.Exit(1)
 			}
-			log.Println("AAAA 记录添加成功")
-		} else if v6_record.IP != IPv6 {
-			log.Println("AAAA 记录与当前 IP 不匹配，更新记录:", IPv6)
-			err = updateRecord(v6_record.ID, subDomain_v6, "AAAA", IPv6)
+			println("添加记录成功:", "A", v4.currentIP)
+		} else if v4.record.IP != v4.currentIP {
+			println("当前记录:", v4.record.IP, ",与当前 IP 不一致, 即将更新")
+			println("===> IPv4: 更新 A 记录")
+			err = updateRecord(v4.record.ID, v4.subDomain, "A", v4.currentIP)
 			if err != nil {
-				log.Println("更新失败: ", err.Error())
+				println("更新记录失败:", err.Error())
 				os.Exit(1)
 			}
-			log.Println("AAAA 记录更新成功")
+			println("更新记录成功:", "A", v4.currentIP)
 		} else {
-			log.Println("当前 AAAA 记录:", v6_record.IP, "无需更新")
+			println("当前记录:", v4.record.IP, ",与当前 IP 一致, 无需更新")
 		}
 	}
-}
-
-func getEnv() error {
-	accessKeyId = os.Getenv("ACCESS_ID")
-	if accessKeyId == "" {
-		return errors.New("无法获取 AccessID, 请设置 ACCESS_ID 环境变量")
-	}
-	accessKeySecret = os.Getenv("ACCESS_SECRET")
-	if accessKeySecret == "" {
-		return errors.New("无法获取 AccessSecret, 请设置 ACCESS_SECRET 环境变量")
-	}
-	buff_v6_disable_flag := os.Getenv("DISABLE_V6")
-	if buff_v6_disable_flag != "" {
-		v6_disable_flag = buff_v6_disable_flag
-	}
-	domain = os.Getenv("DOMAIN")
-	if domain == "" {
-		return errors.New("无法获取 Domain, 请设置 DOMAIN 环境变量")
-	}
-	subDomain = os.Getenv("SUB_DOMAIN")
-	if subDomain == "" {
-		return errors.New("无法获取 SubDomain, 请设置 SUB_DOMAIN 环境变量")
-	}
-	if v6_disable_flag == "0" {
-		domain_v6 = os.Getenv("DOMAIN_V6")
-		if domain_v6 == "" {
-			return errors.New("无法获取 Domain v6, 请设置 DOMAIN_V6 环境变量")
+	if flag.v6 == "true" {
+		println("===> IPv6: 查询当前 IP")
+		getIP(myip.v6, &v6.currentIP, Ipv6Reg)
+		if err != nil {
+			println("查询当前 IP 失败:", err.Error())
+			os.Exit(1)
 		}
-		subDomain_v6 = os.Getenv("SUB_DOMAIN_V6")
-		if subDomain_v6 == "" {
-			return errors.New("无法获取 SubDomain v6, 请设置 ACCESS_SECRET 环境变量")
+		println("当前 IP:", v6.currentIP)
+		println("===> IPv6: 查询当前域名记录")
+		err = queryRecord(v6.subDomain+"."+v6.domain, "AAAA", &v6.record)
+		if err != nil {
+			println("查询记录失败:", err.Error())
+			os.Exit(1)
+		}
+		if v6.record.ID == "" {
+			println("未查询到相应 AAAA 记录, 即将添加")
+			println("===> IPv6: 添加新 AAAA 记录")
+			err = addRecord(v6.domain, v6.subDomain, "AAAA", v6.currentIP)
+			if err != nil {
+				println("添加记录失败:", err.Error())
+				os.Exit(1)
+			}
+			println("添加记录成功:", "AAAA", v6.currentIP)
+		} else if v6.record.IP != v6.currentIP {
+			println("当前记录:", v6.record.IP, ",与当前 IP 不一致, 即将更新")
+			println("===> IPv6: 更新 AAAA 记录")
+			err = updateRecord(v6.record.ID, v6.subDomain, "AAAA", v6.currentIP)
+			if err != nil {
+				println("更新记录失败:", err.Error())
+				os.Exit(1)
+			}
+			println("更新记录成功:", "AAAA", v6.currentIP)
+		} else {
+			println("当前记录:", v6.record.IP, ",与当前 IP 一致, 无需更新")
 		}
 	}
-	buff_v4api := os.Getenv("IPv4_API_URL")
-	if buff_v4api != "" {
-		IPv4_API_URL = buff_v4api
-	}
-	buff_v6api := os.Getenv("IPv6_API_URL")
-	if buff_v4api != "" {
-		IPv6_API_URL = buff_v6api
-	}
-	return nil
-}
-
-func verifyNetConn() error {
-	_, err := http.Get(Test_URL)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func getIP(api_url string, var_ip *string) error {
-	res, err := http.Get(api_url)
-	if err != nil {
-		defer res.Body.Close()
-		return err
-	}
-	ip, _ := io.ReadAll(res.Body)
-	defer res.Body.Close()
-	var resp IPInfo
-	err = json.Unmarshal(ip, &resp)
-	if err != nil {
-		return err
-	}
-	*var_ip = resp.IP
-	return nil
 }

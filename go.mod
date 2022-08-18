@@ -2,7 +2,10 @@ module aliddns-nego
 
 go 1.19
 
-require github.com/aliyun/alibaba-cloud-sdk-go v1.61.1728
+require (
+	github.com/aliyun/alibaba-cloud-sdk-go v1.61.1728
+	github.com/joho/godotenv v1.4.0
+)
 
 require (
 	github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af // indirect

@@ -6,9 +6,9 @@ import (
 	alidns "github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
 )
 
-func queryRecord(full_domain string, r_type string, record *Record) error {
+func queryRecord(full_domain string, r_type string, record *record) error {
 	config := sdk.NewConfig()
-	credential := credentials.NewAccessKeyCredential(accessKeyId, accessKeySecret)
+	credential := credentials.NewAccessKeyCredential(aliApiToken.accessKeyId, aliApiToken.accessKeySecret)
 	client, err := alidns.NewClientWithOptions("cn-hangzhou", config, credential)
 	if err != nil {
 		return err
@@ -33,7 +33,7 @@ func queryRecord(full_domain string, r_type string, record *Record) error {
 
 func addRecord(domain string, rr string, r_type string, value string) error {
 	config := sdk.NewConfig()
-	credential := credentials.NewAccessKeyCredential(accessKeyId, accessKeySecret)
+	credential := credentials.NewAccessKeyCredential(aliApiToken.accessKeyId, aliApiToken.accessKeySecret)
 	client, err := alidns.NewClientWithOptions("cn-hangzhou", config, credential)
 	if err != nil {
 		panic(err)
@@ -55,7 +55,7 @@ func addRecord(domain string, rr string, r_type string, value string) error {
 
 func updateRecord(id string, rr string, r_type string, value string) error {
 	config := sdk.NewConfig()
-	credential := credentials.NewAccessKeyCredential(accessKeyId, accessKeySecret)
+	credential := credentials.NewAccessKeyCredential(aliApiToken.accessKeyId, aliApiToken.accessKeySecret)
 	client, err := alidns.NewClientWithOptions("cn-hangzhou", config, credential)
 	if err != nil {
 		panic(err)
