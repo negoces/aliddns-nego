@@ -5,11 +5,15 @@
 
 |变量名|描述|
 |:-|:-|
+|CONN_TEST_API| generate_204 地址 |
+|ENABLE_IPV4| IPv4 功能开关 |
+|ENABLE_IPV6| IPv4 功能开关 |
 |ACCESS_ID| 访问 Token ID |
 |ACCESS_SECRET| 访问 Token 密钥 |
-|DOMAIN|主域名|
-|SUB_DOMAIN|记录名|
-|DISABLE_V6|禁用 IPv6 `0`或`1` |
+|MYIPV4_API|获取当前IPv4的API|
+|MYIPV6_API|获取当前IPv6的API|
+|DOMAIN_V4|IPv6主域名|
+|SUB_DOMAIN_V4|IPv6记录名|
 |DOMAIN_V6|IPv6主域名|
 |SUB_DOMAIN_V6|IPv6记录名|
 
